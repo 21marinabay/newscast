@@ -18,15 +18,21 @@ var client = mysql.createClient({
 //using database
 client.query('USE ' + DATABASE);
 
-//creating table if not already existing
+//dropping table to reset data if existing
 client.query(
-	'CREATE TABLE IF NOT EXISTS ' + SAVE_TABLE +
-	'(date VARCHAR(20), ' +
+	'DROP TABLE IF EXISTS ' + SAVE_TABLE
+);
+
+//creating table
+client.query(
+	'CREATE TABLE ' + SAVE_TABLE +
+	'(id INT NOT NULL AUTO_INCREMENT, ' +
+	'date VARCHAR(20), ' +
 	'description TEXT, ' +
 	'title TEXT, ' +
 	'src TEXT, ' +
-	'link VARCHAR(255) NOT NULL, ' +
-	'PRIMARY KEY (link))'
+	'link VARCHAR(255), ' +
+	'CONSTRAINT month_PK PRIMARY KEY (id))'
 );
 
 function robot(){
@@ -53,22 +59,16 @@ function robot(){
 			}
 		}
 	)
-	
-	client.end();
 }
 
 function grabdata(url, saveTo)
 {
 	var c = new Crawler({
 	"maxConnections":100,
-	"timeout":60*100, // seconds
+	"timeout":60*1000, // seconds
 	"debug":true,
 	"jQueryUrl": '/home/super21/newscast/jquery.min.js',
 	"callback":function(error,result,$) {
-
-		console.log("-----------------------");
-		console.log(url);
-		console.log(saveTo);
 		var bodyText = $(".bodytext").html();
 		
 		$bodyText = $(bodyText);
@@ -86,26 +86,29 @@ function grabdata(url, saveTo)
 				var body = $(this).html();
 				
 				var title = $(this).find('a').html();
+				title = clean(title);
 				var aUrl = $(this).find('a').attr("href");
-				
-				var startIndex = body.indexOf('<br />')+6;
-				var endIndex = body.indexOf('<br />', startIndex);
-				var desc = body.substring(startIndex, endIndex);
-				desc = desc.trim();
-				
-				startIndex = body.lastIndexOf('<em>')+4;
-				endIndex = body.indexOf('</em>', startIndex);
-				var src = body.substring(startIndex, endIndex);
-				src = src.trim();
-				src = saveTo + src;
-				
-				// console.log('date: ' + date);
-				// console.log('title: ' + title);
-				// console.log('link: ' + aUrl);
-				// console.log('desc: ' + desc);
-				// console.log('src: ' + src);
-				
-				//saveData(date, title, aUrl, desc, src);
+				if (!(aUrl == undefined)) {
+					if (aUrl.lastIndexOf("/news_room", 0) === 0) {
+						aUrl = URL + aUrl;
+					} else if (!(aUrl.lastIndexOf("http://", 0)) == 0) {
+						aUrl = saveTo + aUrl;
+					}
+					
+					var startIndex = body.indexOf('<br />')+6;
+					var endIndex = body.indexOf('<br />', startIndex);
+					var desc = body.substring(startIndex, endIndex);
+					desc = desc.trim();
+					desc = clean(desc);
+					
+					startIndex = body.lastIndexOf('<em>')+4;
+					endIndex = body.indexOf('</em>', startIndex);
+					var src = body.substring(startIndex, endIndex);
+					src = src.trim();
+					src = clean(src);
+					
+					saveData(date, title, aUrl, desc, src);
+				}
 			}
 		});
 	}
@@ -115,28 +118,44 @@ function grabdata(url, saveTo)
 }
 
 function saveData(date, title, link, desc, src) {
-	client.query(
-		'SELECT * FROM ' + SAVE_TABLE + ' WHERE link='+link,
-		function selectCb(err, results, fields) {
-			if (results == undefined) {
-				client.query(
-					'INSERT INTO ' + SAVE_TABLE + ' SET date = ?, description = ?, title = ?, src = ?, link = ?',
-					[date, desc, title, src, link]
-				);
-				console.log("Saved archive successfully for " + link + ".");
+	if (link != null) {
+		client.query(
+			'INSERT INTO ' + SAVE_TABLE + ' SET date = ?, description = ?, title = ?, src = ?, link = ?',
+			[date, desc, title, src, link]
+		);
+		console.log("Saved archive successfully for " + link + ".");
+	}
+}
+
+function clean(str) {
+	if (str != null) {
+		var start = 0;
+		var end = 0;
+		while (true) {
+			//locate start and end of tag
+			start = str.indexOf("<");
+			end = str.indexOf(">", start);
+			
+			if (start < 0 && end < 0) {
+				break;
+			}
+			
+			end += 1;
+			
+			if (start > 0 && end < 0) {				//Got ">" no "<"
+				str = str.substring(end+1);
+			} else if (start < 0 && end > 0) {		//Got "<" no ">"
+				str = str.substring(0, start);
 			} else {
-				if (results.length > 0) {
-					console.log("There is already an archive entry for " + link + ".");
-				} else {
-					client.query(
-						'INSERT INTO ' + SAVE_TABLE + ' SET date = ?, description = ?, title = ?, src = ?, link = ?',
-						[date, desc, title, src, link]
-					);
-					console.log("Saved archive successfully for " + date + ".");
-				}
+				var tag = str.substring(start, end);
+				str = str.replace(tag, "");
 			}
 		}
-	);
+		
+		return str;
+	}
+	
+	return null;
 }
 
 function converter(month) {
@@ -168,4 +187,3 @@ function converter(month) {
 }
 
 robot();
-//grabdata('http://www.smu.edu.sg/news_room/smu_in_the_news/2012/201205.asp');

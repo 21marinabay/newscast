@@ -83,7 +83,8 @@ function saveData(date, link) {
 		}
 		
 		client.query(
-			'SELECT * FROM ' + TABLE + ' WHERE year='+year + ' AND month='+month,
+			'SELECT * FROM ' + TABLE + ' WHERE year=? AND month=?',
+			[year, month],
 			function selectCb(err, results, fields) {
 				if (results == undefined) {
 					client.query(
