@@ -29,7 +29,7 @@ function grabdata(url)
 	"maxConnections":100,
 	"timeout":60*100, // seconds
 	"debug":true,
-	"jQueryUrl": '/Applications/MAMP/htdocs/jquery.min.js',
+	"jQueryUrl": '/home/super21/newscast/jquery.min.js',
 	"callback":function(error,result,$) {
 		
 		console.log("Got page"+url);
