@@ -66,6 +66,9 @@ function grabdata(url, saveTo)
 	"jQueryUrl": '/home/super21/newscast/jquery.min.js',
 	"callback":function(error,result,$) {
 
+		console.log("-----------------------");
+		console.log(url);
+		console.log(saveTo);
 		var bodyText = $(".bodytext").html();
 		
 		$bodyText = $(bodyText);
@@ -102,7 +105,7 @@ function grabdata(url, saveTo)
 				// console.log('desc: ' + desc);
 				// console.log('src: ' + src);
 				
-				saveData(date, title, aUrl, desc, src);
+				//saveData(date, title, aUrl, desc, src);
 			}
 		});
 	}
